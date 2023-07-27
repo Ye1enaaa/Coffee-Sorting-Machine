@@ -1,8 +1,9 @@
 import tkinter as tk
 import cv2
 import numpy as np
+import RPi.GPIO as GPIO
 from keras.models import load_model
-
+import time
 # Disable scientific notation for clarity
 np.set_printoptions(suppress=True)
 
@@ -11,6 +12,10 @@ model = load_model("keras_model.h5", compile=False)
 
 # Load the labels
 class_names = open("labels.txt", "r").readlines()
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(14, GPIO.OUT)
 
 # CAMERA can be 0 or 1 based on the default camera of your computer
 camera = cv2.VideoCapture(0)
@@ -51,12 +56,13 @@ def start_scanning():
         print("Class:", class_name.strip()[2:])
         print("Confidence Score:", str(np.round(confidence_score * 100))[:-2], "%")
 
-        if bad_beans_count >= 15:
+        if bad_beans_count >= 8:
             print("Actuators on")
-            
+            GPIO.output(14, GPIO.HIGH)
             bad_beans_count = 0
             # code for actuators
-
+        if bad_beans_count == 4:
+            GPIO.output(14, GPIO.LOW)
         # Listen to the keyboard for presses.
         keyboard_input = cv2.waitKey(1)
 
@@ -84,4 +90,4 @@ button.pack()
 
 # Start the Tkinter event loop
 root.mainloop()
-
+GPIO.cleanup()
