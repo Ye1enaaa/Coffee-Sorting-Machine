@@ -24,7 +24,7 @@ bad_beans_count = 0  # Counter for consecutive bad beans
 
 def start_scanning():
     global bad_beans_count
-
+    global neut_good_beans_count
     while True:
         # Grab the web camera's image.
         ret, image = camera.read()
@@ -51,18 +51,27 @@ def start_scanning():
             bad_beans_count += 1
         else:
             bad_beans_count = 0
-
+        
+        if class_name.strip() == "0 Good" or class_name.strip() == "2 Neutral":
+            GPIO.output(14, GPIO.LOW)
+            #bad_beans_count = 0
+#         if class_name.strip() == "2 Neutral":
+#             neut_good_beans_count = 1
+#             #bad_beans_count = 0
         # Print prediction and confidence score
         print("Class:", class_name.strip()[2:])
         print("Confidence Score:", str(np.round(confidence_score * 100))[:-2], "%")
 
-        if bad_beans_count >= 8:
+        if bad_beans_count >= 5:
             print("Actuators on")
             GPIO.output(14, GPIO.HIGH)
             bad_beans_count = 0
             # code for actuators
-        if bad_beans_count == 4:
+        if bad_beans_count == 2:
             GPIO.output(14, GPIO.LOW)
+            #either butangan ni dirig time.sleep()
+#         if neut_good_beans_count == 1:
+#             GPIO.output(14, GPIO.LOW)
         # Listen to the keyboard for presses.
         keyboard_input = cv2.waitKey(1)
 
