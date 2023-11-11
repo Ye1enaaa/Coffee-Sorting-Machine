@@ -1,85 +1,129 @@
-from keras.models import load_model
 import cv2
 import numpy as np
-
-# Disable scientific notation for clarity
-np.set_printoptions(suppress=True)
-
-# Load the first model
-model1 = load_model("keras_model.h5", compile=False)
-
-# Load the second model
-model2 = load_model("keras_model.h5", compile=False)
+import RPi.GPIO as GPIO
+from keras.models import load_model
+import time
+import sqlite3
+# Load the model
+model = load_model("keras_test_one.h5", compile=False)
 
 # Load the labels for model 1
 class_names1 = open("labels.txt", "r").readlines()
 
-# Load the labels for model 2
-class_names2 = open("labels.txt", "r").readlines()
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(18, GPIO.OUT)
 
-# Initialize two cameras
-camera1 = cv2.VideoCapture(0)  # First camera
-camera2 = cv2.VideoCapture(2)  # Second camera
+#GPIO.output(18, GPIO.HIGH)
 
-bad_beans_count = 0  # Counter for consecutive bad beans
+# CAMERA can be 0 or 1 based on the default camera of your computer
+camera = cv2.VideoCapture(0)
 
-while True:
-    # Read frames from both cameras
-    ret1, image1 = camera1.read()
-    ret2, image2 = camera2.read()
+#bad_beans_count = 0  # Counter for consecutive bad beans
+conn = sqlite3.connect("bean_loggerist.db")
+cursor = conn.cursor()
 
-    # Resize and display the images from both cameras
-    image1 = cv2.resize(image1, (224, 224), interpolation=cv2.INTER_AREA)
-    image2 = cv2.resize(image2, (224, 224), interpolation=cv2.INTER_AREA)
+cursor.execute('''CREATE TABLE IF NOT EXISTS bean_counts_data(
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  good FLOAT,
+                  bad FLOAT
+                )''')
+conn.commit()
+try:
+    bad_consecutive_count = 0
+    good_consecutive_count = 0
+    current_bean_type = None
+    while True:
+        # Grab the web camera's image.
+        ret, image = camera.read()
 
-    cv2.imshow("Webcam Image 1", image1)
-    cv2.imshow("Webcam Image 2", image2)
+        # Resize the raw image into (224-height,224-width) pixels
+        image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
+        
+        # Display the captured frame
+        cv2.imshow("Capture Beans", image)
 
-    # Process images from camera 1
-    image1 = np.asarray(image1, dtype=np.float32).reshape(1, 224, 224, 3)
-    image1 = (image1 / 127.5) - 1
-    prediction1 = model1.predict(image1)
-    index1 = np.argmax(prediction1)
-    class_name1 = class_names1[index1]
-    confidence_score1 = prediction1[0][index1]
+        # Make the image a numpy array and reshape it to the model's input shape.
+        image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
 
-    # Process images from camera 2
-    image2 = np.asarray(image2, dtype=np.float32).reshape(1, 224, 224, 3)
-    image2 = (image2 / 127.5) - 1
-    prediction2 = model2.predict(image2)
-    index2 = np.argmax(prediction2)
-    class_name2 = class_names2[index2]
-    confidence_score2 = prediction2[0][index2]
+        # Normalize the image array
+        image = (image / 127.5) - 1
 
-    if class_name1.strip() == "1 Bad":  # Check for "1 Bad" label for camera 1
-        bad_beans_count += 1
-    else:
-        bad_beans_count = 0
+        # Predict the model
+        prediction = model.predict(image)
+        index = np.argmax(prediction)
+        class_name = class_names[index].strip()
+        confidence_score = prediction[0][index]
 
-    if class_name2.strip() == "1 Bad":  # Check for "1 Bad" label for camera 2
-        bad_beans_count += 1
-    else:
-        bad_beans_count = 0
+        if class_name == "1 Bad":
+            GPIO.output(18, GPIO.HIGH)
+            #if current_bean_type != "Bad":
+                #bad_consecutive_count = 0
+            bad_consecutive_count += 1
+            good_consecutive_count = 0
+            #current_bean_type = 'Bad'
+        if class_name == "0 Good":
+            #bad_beans_count = 0
+            GPIO.output(18, GPIO.LOW)
+            #if current_bean_type != "Good":
+                #consecutive_count = 0
+            good_consecutive_count += 1
+            bad_consecutive_count = 0
+            #current_bean_type = 'Good'
+        if class_name == "2 Neutral":
+            #bad_beans_count = 0
+            GPIO.output(18, GPIO.LOW)
+            good_consecutive_count = 0
+            bad_consecutive_count = 0
+        # Print prediction and confidence score
+        print("Class:", class_name[2:])
+        #print("Confidence Score:", str(np.round(confidence_score * 100))[:-2], "%")
 
-    print("Camera 1 - Class:", class_name1.strip()[2:])
-    print("Camera 1 - Confidence Score:", str(np.round(confidence_score1 * 100))[:-2], "%")
+        if bad_consecutive_count >= 5:
+           # cursor.execute("SELECT count FROM bean_counts WHERE bean_type = ?", (current_bean_type,))
+            #result = cursor.fetchone()
+            #if result:
+            #   current_count = result[0]
+            #    current_count += 1
+            #    cursor.execute("UPDATE bean_counts SET count = ? WHERE bean_type =?", (current_count, current_bean_type))
+            #else:
+                #cursor.execute("INSERT INTO bean_counts(bean_type,count) VALUES (?, 1)", (current_bean_type,))
+            insert_data_query = '''
+            INSERT INTO bean_counts_data(good, bad) VALUES (?,?);
+            '''
+            bean_value = (0,1)
+            cursor.execute(insert_data_query, bean_value)
+            print("Bad bean added")
+            conn.commit()
+            bad_consecutive_count = 0
+        if good_consecutive_count >= 5:
+           # cursor.execute("SELECT count FROM bean_counts WHERE bean_type = ?", (current_bean_type,))
+            #result = cursor.fetchone()
+            #if result:
+            #   current_count = result[0]
+            #    current_count += 1
+            #    cursor.execute("UPDATE bean_counts SET count = ? WHERE bean_type =?", (current_count, current_bean_type))
+            #else:
+                #cursor.execute("INSERT INTO bean_counts(bean_type,count) VALUES (?, 1)", (current_bean_type,))
+            insert_data_query = '''
+            INSERT INTO bean_counts_data(good, bad) VALUES (?,?);
+            '''
+            bean_value = (1,0)
+            cursor.execute(insert_data_query, bean_value)
+            print("Good bean added")
+            conn.commit()
+            good_consecutive_count = 0
+        
 
-    print("Camera 2 - Class:", class_name2.strip()[2:])
-    print("Camera 2 - Confidence Score:", str(np.round(confidence_score2 * 100))[:-2], "%")
+        # Listen to the keyboard for presses.
+        keyboard_input = cv2.waitKey(1)
 
-    if bad_beans_count >= 5:
-        print("Actuators on")
+        # 27 is the ASCII for the esc key on your keyboard.
+        if keyboard_input == 27:
+            break
 
-    # Listen to the keyboard for presses.
-    keyboard_input = cv2.waitKey(1)
-
-    # 27 is the ASCII for the esc key on your keyboard.
-    if keyboard_input == 27:
-        break
-
-# Release camera objects
-camera1.release()
-camera2.release()
-
-# Close all windows
-cv2.destroyAllWindows()
+finally:
+    GPIO.cleanup()
+    camera.release()
+    cv2.destroyAllWindows()
+    conn.close()
