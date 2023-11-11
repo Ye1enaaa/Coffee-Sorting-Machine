@@ -1,29 +1,25 @@
 import cv2
 import numpy as np
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 from keras.models import load_model
 import time
 import sqlite3
 
-# Constants
-MODEL_PATH = "keras_test_one.h5"
-LABELS_PATH = "labels.txt"
-BAD_THRESHOLD = 5
-GOOD_THRESHOLD = 5
-PAUSE_TIME = 2  # Pause time in seconds
+# Load the model
+model = load_model("keras_model.h5", compile=False)
 
-# Load the model and labels
-model = load_model(MODEL_PATH, compile=False)
-class_names = [line.strip() for line in open(LABELS_PATH, "r")]
+# Load the labels
+class_names = open("labels.txt", "r").readlines()
 
-# Set up GPIO
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-GPIO.setup(18, GPIO.OUT)
+#GPIO.setmode(GPIO.BCM)
+#GPIO.setwarnings(False)
+#GPIO.setup(18, GPIO.OUT)
 
-# Create the database and table
+camera = cv2.VideoCapture(0)
+
 conn = sqlite3.connect("bean_loggerist.db")
 cursor = conn.cursor()
+
 cursor.execute('''CREATE TABLE IF NOT EXISTS bean_counts_data(
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
                   good FLOAT,
@@ -35,8 +31,7 @@ try:
     bad_consecutive_count = 0
     good_consecutive_count = 0
     current_bean_type = None
-    camera = cv2.VideoCapture(0)
-    pause_start_time = None
+    scanning_enabled = True  # Variable to control scanning
 
     while True:
         ret, image = camera.read()
@@ -48,49 +43,52 @@ try:
 
         prediction = model.predict(image)
         index = np.argmax(prediction)
-        class_name = class_names[index]
+        class_name = class_names[index].strip()
         confidence_score = prediction[0][index]
 
         if class_name == "1 Bad":
-            GPIO.output(18, GPIO.HIGH)
+            #GPIO.output(18, GPIO.HIGH)
             bad_consecutive_count += 1
             good_consecutive_count = 0
         elif class_name == "0 Good":
-            GPIO.output(18, GPIO.LOW)
+            #GPIO.output(18, GPIO.LOW)
             good_consecutive_count += 1
             bad_consecutive_count = 0
-        else:
-            GPIO.output(18, GPIO.LOW)
+        elif class_name == "2 Neutral":
+            #GPIO.output(18, GPIO.LOW)
             good_consecutive_count = 0
             bad_consecutive_count = 0
 
-        print("Class:", class_name)
-        print("Confidence Score:", f"{confidence_score * 100:.2f}%")
+        print("Class:", class_name[2:])
 
-        if bad_consecutive_count >= BAD_THRESHOLD:
-            cursor.execute('''INSERT INTO bean_counts_data(good, bad) VALUES (?, ?);''', (0, 1))
-            conn.commit()
+        if bad_consecutive_count >= 5:
+            insert_data_query = '''INSERT INTO bean_counts_data(good, bad) VALUES (?,?);'''
+            bean_value = (0, 1)
+            cursor.execute(insert_data_query, bean_value)
             print("Bad bean added")
-            bad_consecutive_count = 0
-
-        if good_consecutive_count >= GOOD_THRESHOLD:
-            cursor.execute('''INSERT INTO bean_counts_data(good, bad) VALUES (?, ?);''', (1, 0))
             conn.commit()
+            bad_consecutive_count = 0
+        if good_consecutive_count >= 5:
+            insert_data_query = '''INSERT INTO bean_counts_data(good, bad) VALUES (?,?);'''
+            bean_value = (1, 0)
+            cursor.execute(insert_data_query, bean_value)
             print("Good bean added")
-            
-            # Pause the scanning process for 2 seconds
-            pause_start_time = time.time()
-            while time.time() - pause_start_time < PAUSE_TIME:
-                pass
-                
+            conn.commit()
             good_consecutive_count = 0
+            
+            # Disable scanning for 2 seconds
+            scanning_enabled = False
+            pause_start_time = time.time()
+            while time.time() - pause_start_time < 2:
+                pass
+            scanning_enabled = True
 
         keyboard_input = cv2.waitKey(1)
         if keyboard_input == 27:
             break
 
 finally:
-    GPIO.cleanup()
+    #GPIO.cleanup()
     camera.release()
     cv2.destroyAllWindows()
     conn.close()
