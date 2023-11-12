@@ -6,13 +6,15 @@ import time
 import sqlite3
 
 # Constants
-MODEL_PATH = "keras_test_one.h5"
+MODEL_PATH_CAM1 = "keras_model.h5"
+MODEL_PATH_CAM2 = "keras_model.h5"
 LABELS_PATH = "labels.txt"
 BAD_THRESHOLD = 5
 GOOD_THRESHOLD = 5
 
-# Load the model and labels
-model = load_model(MODEL_PATH, compile=False)
+# Load the models and labels
+model_cam1 = load_model(MODEL_PATH_CAM1, compile=False)
+model_cam2 = load_model(MODEL_PATH_CAM2, compile=False)
 class_names = [line.strip() for line in open(LABELS_PATH, "r")]
 
 # Set up GPIO
@@ -34,29 +36,49 @@ try:
     bad_consecutive_count = 0
     good_consecutive_count = 0
     current_bean_type = None
-    camera = cv2.VideoCapture(0)
+
+    # Initialize two cameras
+    camera1 = cv2.VideoCapture(0)
+    camera2 = cv2.VideoCapture(2)
 
     while True:
-        ret, image = camera.read()
-        image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
-        cv2.imshow("Capture Beans", image)
+        # Read frames from both cameras
+        ret1, image1 = camera1.read()
+        ret2, image2 = camera2.read()
 
-        image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
-        image = (image / 127.5) - 1
+        # Resize and process images from camera 1
+        image1 = cv2.resize(image1, (224, 224), interpolation=cv2.INTER_AREA)
+        image1 = np.asarray(image1, dtype=np.float32).reshape(1, 224, 224, 3)
+        image1 = (image1 / 127.5) - 1
 
-        prediction = model.predict(image)
-        index = np.argmax(prediction)
-        class_name = class_names[index]
-        confidence_score = prediction[0][index]
+        prediction_cam1 = model_cam1.predict(image1)
+        index_cam1 = np.argmax(prediction_cam1)
+        class_name_cam1 = class_names[index_cam1]
+        confidence_score_cam1 = prediction_cam1[0][index_cam1]
 
-        if class_name == "1 Bad":
+        # Resize and process images from camera 2
+        image2 = cv2.resize(image2, (224, 224), interpolation=cv2.INTER_AREA)
+        image2 = np.asarray(image2, dtype=np.float32).reshape(1, 224, 224, 3)
+        image2 = (image2 / 127.5) - 1
+
+        prediction_cam2 = model_cam2.predict(image2)
+        index_cam2 = np.argmax(prediction_cam2)
+        class_name_cam2 = class_names[index_cam2]
+        confidence_score_cam2 = prediction_cam2[0][index_cam2]
+
+        # Combine images (adjust the concatenation axis based on your camera arrangement)
+        combined_image = np.hstack((image1[0], image2[0]))
+        print("Combined Image Shape:", combined_image.shape)
+        cv2.imshow("Capture Beans", combined_image)
+
+        if class_name_cam1 == "1 Bad" or class_name_cam2 == "1 Bad":
             #GPIO.output(18, GPIO.HIGH)
             print('Bad')
             bad_consecutive_count += 1
             good_consecutive_count = 0
-        elif class_name == "0 Good":
-            print('Good')
+        elif class_name_cam1 == "0 Good" or class_name_cam2 == "0 Good":
             #GPIO.output(18, GPIO.LOW)
+            print('Good')
             good_consecutive_count += 1
             bad_consecutive_count = 0
         else:
@@ -65,8 +87,11 @@ try:
             good_consecutive_count = 0
             bad_consecutive_count = 0
 
-        print("Class:", class_name)
-        print("Confidence Score:", f"{confidence_score * 100:.2f}%")
+        print("Class Camera 1:", class_name_cam1)
+        print("Confidence Score Camera 1:", f"{confidence_score_cam1 * 100:.2f}%")
+
+        print("Class Camera 2:", class_name_cam2)
+        print("Confidence Score Camera 2:", f"{confidence_score_cam2 * 100:.2f}%")
 
         if bad_consecutive_count >= BAD_THRESHOLD:
             cursor.execute('''INSERT INTO bean_counts_data(good, bad) VALUES (?, ?);''', (0, 1))
@@ -86,6 +111,7 @@ try:
 
 finally:
     #GPIO.cleanup()
-    camera.release()
+    camera1.release()
+    camera2.release()
     cv2.destroyAllWindows()
     conn.close()
