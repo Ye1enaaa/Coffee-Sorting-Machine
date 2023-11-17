@@ -21,14 +21,14 @@ GPIO.setwarnings(False)
 GPIO.setup(18, GPIO.OUT)
 
 # Create the database and table
-conn = sqlite3.connect("bean_loggerist.db")
-cursor = conn.cursor()
-cursor.execute('''CREATE TABLE IF NOT EXISTS bean_counts_data(
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  good FLOAT,
-                  bad FLOAT
-                )''')
-conn.commit()
+with sqlite3.connect("bean_loggerist.db") as conn:
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bean_counts_data(
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      good FLOAT,
+                      bad FLOAT
+                    )''')
+    conn.commit()
 
 try:
     bad_consecutive_count = 0
@@ -62,27 +62,20 @@ try:
             good_consecutive_count = 0
             bad_consecutive_count = 0
 
-        print("Class:", class_name)
-        print("Confidence Score:", f"{confidence_score * 100:.2f}%")
-
-        if bad_consecutive_count >= BAD_THRESHOLD:
-            cursor.execute('''INSERT INTO bean_counts_data(good, bad) VALUES (?, ?);''', (0, 1))
-            conn.commit()
-            print("Bad bean added")
-            bad_consecutive_count = 0
-
-        if good_consecutive_count >= GOOD_THRESHOLD:
-            cursor.execute('''INSERT INTO bean_counts_data(good, bad) VALUES (?, ?);''', (1, 0))
-            conn.commit()
-            print("Good bean added")
-            good_consecutive_count = 0
+        print(f"Class: {class_name}")
+        print(f"Confidence Score: {confidence_score * 100:.2f}%")
 
         keyboard_input = cv2.waitKey(1)
         if keyboard_input == 27:
             break
 
 finally:
+    # Combine consecutive database inserts
+    with sqlite3.connect("bean_loggerist.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute('''INSERT INTO bean_counts_data(good, bad) VALUES (?, ?);''', (good_consecutive_count, bad_consecutive_count))
+        conn.commit()
+
     GPIO.cleanup()
     camera.release()
     cv2.destroyAllWindows()
-    conn.close()
