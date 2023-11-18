@@ -12,17 +12,13 @@ try:
     total_bad = 0
 
     for row in rows:
-        # Assuming the structure of each row is a list
         last_value = row[-1] if row else None
 
-        # Append the last value to data_value list
         data_value.append(last_value)
 
-        # Update total_bad count if the last value is not None
         if last_value is not None:
             total_bad += last_value
 
-    # Get the latest value
     latest_value = data_value[-1] if data_value else None
 
     print("Data Values:", data_value)
