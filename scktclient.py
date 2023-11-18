@@ -1,6 +1,6 @@
+import socket
 import cv2
 import numpy as np
-import paho.mqtt.publish as publish
 from keras.models import load_model
 import time
 import sqlite3
@@ -9,17 +9,18 @@ import sqlite3
 MODEL_PATH = "keras_model.h5"
 LABELS_PATH = "labels.txt"
 BAD_THRESHOLD = 80  # Set the confidence threshold for "Bad" class
-GOOD_THRESHOLD = 5
 
 # Load the model and labels
 model = load_model(MODEL_PATH, compile=False)
 class_names = [line.strip() for line in open(LABELS_PATH, "r")]
 
 # MQTT Broker address (replace with the IP address of your Raspberry Pi)
-broker_address = "192.168.1.3"
+broker_address = "192.168.1.23"
 
 def send_command(command):
-    publish.single("actuator/control", payload=command, hostname=broker_address)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((broker_address, 8888))
+        s.sendall(command.encode())
 
 # Set up database
 with sqlite3.connect("bean_loggerist.db") as conn:
@@ -51,7 +52,7 @@ try:
         confidence_score = prediction[0][index]
 
         if class_name == "1 Bad" and confidence_score > BAD_THRESHOLD / 100:
-            # Trigger GPIO on Raspberry Pi
+            # Trigger command on Raspberry Pi
             print("Bad bean detected with high confidence!")
             send_command('activate')
             bad_consecutive_count += 1
