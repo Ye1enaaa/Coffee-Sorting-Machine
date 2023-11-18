@@ -80,7 +80,7 @@ try:
         keyboard_input = cv2.waitKey(1)
         if keyboard_input == 27:
             break
-
+        time.sleep(0.7)
 finally:
     # Combine consecutive database inserts
     #with sqlite3.connect("bean_loggerist.db") as conn:
