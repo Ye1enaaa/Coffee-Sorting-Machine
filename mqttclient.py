@@ -26,8 +26,7 @@ with sqlite3.connect("bean_loggerist.db") as conn:
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS bean_counts_data(
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      good FLOAT,
-                      bad FLOAT
+                      bad INTEGER
                     )''')
     conn.commit()
 
@@ -65,6 +64,11 @@ try:
             good_consecutive_count = 0
             bad_consecutive_count = 0
 
+        if bad_consecutive_count >= 2:
+            cursor = conn.cursor()
+            cursor.execute('''INSERT INTO bean_counts_data(bad) VALUES (?);''', (1,))
+            conn.commit()
+
         print(f"Class: {class_name}")
         print(f"Confidence Score: {confidence_score * 100:.2f}%")
 
@@ -74,10 +78,10 @@ try:
 
 finally:
     # Combine consecutive database inserts
-    with sqlite3.connect("bean_loggerist.db") as conn:
-        cursor = conn.cursor()
-        cursor.execute('''INSERT INTO bean_counts_data(good, bad) VALUES (?, ?);''', (good_consecutive_count, bad_consecutive_count))
-        conn.commit()
+    #with sqlite3.connect("bean_loggerist.db") as conn:
+        #cursor = conn.cursor()
+        #cursor.execute('''INSERT INTO bean_counts_data(bad) VALUES (?);''', (bad_consecutive_count))
+        #conn.commit()
 
     camera.release()
     cv2.destroyAllWindows()
