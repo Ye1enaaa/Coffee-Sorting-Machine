@@ -16,7 +16,7 @@ model = load_model(MODEL_PATH, compile=False)
 class_names = [line.strip() for line in open(LABELS_PATH, "r")]
 
 # MQTT Broker address (replace with the IP address of your Raspberry Pi)
-broker_address = "192.168.1.23"
+broker_address = "192.168.1.3"
 
 def send_command(command):
     publish.single("actuator/control", payload=command, hostname=broker_address)
