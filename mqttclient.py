@@ -55,7 +55,7 @@ try:
             print("Bad bean detected with high confidence!")
             send_command('activate')
             bad_consecutive_count += 1
-            good_consecutive_count = 0
+            #good_consecutive_count = 0
         elif class_name == "0 Good":
             send_command('deactivate')
             good_consecutive_count += 1
