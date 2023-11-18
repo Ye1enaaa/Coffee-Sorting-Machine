@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-#import RPi.GPIO as GPIO
+import paho.mqtt.publish as publish
 from keras.models import load_model
 import time
 import sqlite3
@@ -15,12 +15,13 @@ GOOD_THRESHOLD = 5
 model = load_model(MODEL_PATH, compile=False)
 class_names = [line.strip() for line in open(LABELS_PATH, "r")]
 
-# Set up GPIO
-#GPIO.setmode(GPIO.BCM)
-#GPIO.setwarnings(False)
-#GPIO.setup(18, GPIO.OUT)
+# MQTT Broker address (replace with the IP address of your Raspberry Pi)
+broker_address = "192.168.1.23"
 
-# Create the database and table
+def send_command(command):
+    publish.single("actuator/control", payload=command, hostname=broker_address)
+
+# Set up database
 with sqlite3.connect("bean_loggerist.db") as conn:
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS bean_counts_data(
@@ -50,17 +51,17 @@ try:
         confidence_score = prediction[0][index]
 
         if class_name == "1 Bad" and confidence_score > BAD_THRESHOLD / 100:
-            # Trigger GPIO or take other action
+            # Trigger GPIO on Raspberry Pi
             print("Bad bean detected with high confidence!")
-            # GPIO.output(18, GPIO.HIGH)
+            send_command('activate')
             bad_consecutive_count += 1
             good_consecutive_count = 0
         elif class_name == "0 Good":
-            #GPIO.output(18, GPIO.LOW)
+            send_command('deactivate')
             good_consecutive_count += 1
             bad_consecutive_count = 0
         else:
-            #GPIO.output(18, GPIO.LOW)
+            send_command('deactivate')
             good_consecutive_count = 0
             bad_consecutive_count = 0
 
@@ -78,6 +79,5 @@ finally:
         cursor.execute('''INSERT INTO bean_counts_data(good, bad) VALUES (?, ?);''', (good_consecutive_count, bad_consecutive_count))
         conn.commit()
 
-    #GPIO.cleanup()
     camera.release()
     cv2.destroyAllWindows()

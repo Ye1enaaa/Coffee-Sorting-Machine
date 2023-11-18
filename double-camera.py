@@ -68,7 +68,7 @@ try:
 
         # Combine images (adjust the concatenation axis based on your camera arrangement)
         combined_image = np.hstack((image1[0], image2[0]))
-        print("Combined Image Shape:", combined_image.shape)
+        #print("Combined Image Shape:", combined_image.shape)
         cv2.imshow("Capture Beans", combined_image)
 
         if class_name_cam1 == "1 Bad" or class_name_cam2 == "1 Bad":
