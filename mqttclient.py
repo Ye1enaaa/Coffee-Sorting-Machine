@@ -63,14 +63,14 @@ try:
             good_consecutive_count = 0
             bad_consecutive_count = 0
 
-        if bad_consecutive_count == 5:
+        if bad_consecutive_count == 2:
             send_command('activate')
             cursor = conn.cursor()
             cursor.execute('''INSERT INTO bean_counts_data(bad) VALUES (?);''', (1,))
             conn.commit()
             class_name == "0 Good"
             bad_consecutive_count = 0
-        if bad_consecutive_count >= 5:
+        if bad_consecutive_count > 3:
             send_command('deactivate')
             class_name == "0 Good"
             bad_consecutive_count = 0
@@ -80,7 +80,7 @@ try:
         keyboard_input = cv2.waitKey(1)
         if keyboard_input == 27:
             break
-
+        time.sleep(0.7)
 finally:
     # Combine consecutive database inserts
     #with sqlite3.connect("bean_loggerist.db") as conn:
