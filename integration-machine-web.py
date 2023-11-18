@@ -1,38 +1,39 @@
 import sqlite3
 import requests
 
-# Connect to the SQLite database
+
 conn = sqlite3.connect("bean_loggerist.db")
 cursor = conn.cursor()
 
 try:
     cursor.execute("SELECT * FROM bean_counts_data")
     rows = cursor.fetchall()
-    #data_to_send = []
-    total_good = 0
+    data_value = []
     total_bad = 0
-    for row in rows:
-        #id, bean_type, count = row
-        good_value = row[1]
-        bad_value = row[2]
-        
-        #print(row[0])
-        #print(good_value)
-        #print(bad_value)
-        
-        total_good += good_value
-        total_bad += bad_value
-        
-        print(total_bad)
-        data_to_send = {
-            'good': good_value,
-            'bad': bad_value
-        }
 
-    # Define the URL of your Laravel backend API endpoint
-    laravel_api_url = "http://192.168.1.26:8000/api/post-count"
+    for row in rows:
+        # Assuming the structure of each row is a list
+        last_value = row[-1] if row else None
+
+        # Append the last value to data_value list
+        data_value.append(last_value)
+
+        # Update total_bad count if the last value is not None
+        if last_value is not None:
+            total_bad += last_value
+
+    # Get the latest value
+    latest_value = data_value[-1] if data_value else None
+
+    print("Data Values:", data_value)
+    print("Total Bad:", total_bad)
+    print("Latest Value:", latest_value)
+    data_to_send = {
+        'bad': total_bad
+    }
+
+    laravel_api_url = "http://192.168.1.22:8000/api/post-count"
     headers = {'Content-Type': 'application/json'}
-    # Send a POST request to the Laravel API
     response = requests.post(laravel_api_url, json=data_to_send, headers=headers)
 
     if response.status_code == 200:
