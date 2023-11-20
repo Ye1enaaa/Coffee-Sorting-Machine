@@ -4,7 +4,7 @@ customtkinter.set_appearance_mode("System")  # Modes: system (default), light, d
 customtkinter.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
 
 app = customtkinter.CTk()  # create CTk window like you do with the Tk window
-app.geometry("400x240")
+app.geometry("900x550")
 
 def button_function():
     print("button pressed")
