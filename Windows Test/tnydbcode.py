@@ -40,13 +40,13 @@ try:
         confidence_score = prediction[0][index]
 
         if class_name == "1 Bad":
-            print("Bad bean detected with confidence:", confidence_score)
+            print("Bad bean detected with confidence:", confidence_score*100)
 
             # Insert bad bean information into TinyDB
             db.insert({'status': 'bad'})
 
         elif class_name == "0 Good" or class_name == "2 Neutral":
-            print("Good or neutral bean detected with confidence:", confidence_score)
+            print("Good or neutral bean detected with confidence:", confidence_score*100)
 
         keyboard_input = cv2.waitKey(1)
 
