@@ -1,33 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON File Content</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fetch Data from MQTT</title>
+  <!-- Include the mqtt.js library -->
+  <!-- Alternative CDN link for the mqtt.js library -->
+  <!-- Include the mqtt.js library from the alternative CDN -->
+<script src="https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
-    <button id="retrieveBtn" onclick="retrieveJsonContent()">Retrieve JSON Content</button>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.8/mqtt.min.js"></script>
-    <script>
-        const client = mqtt.connect("mqtt://192.168.1.23:1883");  // Replace with your MQTT broker's IP address
+<!-- HTML button -->
+<button id="fetchDataButton">Fetch Data</button>
 
-        client.on("message", (topic, message) => {
-            if (topic === "json/json_content") {
-                console.log("Received JSON content:");
-                console.log(JSON.parse(message.toString()));
-            }
-        });
+<!-- JavaScript code -->
+<script>
+    // MQTT broker details
+    const mqttBrokerHost = "192.168.1.23"; // Replace with your MQTT broker's IP address
+    const mqttTopic = "json/file"; // Replace with the actual MQTT topic
+  
+    // Create an MQTT client
+    const client = mqtt.connect(`ws://${mqttBrokerHost}:1883`, {
+      //clientId: 'your_unique_client_id', // Choose a unique client ID
+      protocolVersion: 4, // Use MQTT protocol version 3.1.1
+      keepalive: 30, // Set the keep-alive interval in seconds
+    });
+  
+    // Function to handle incoming MQTT messages
+    function handleMessage(topic, message) {
+      // Parse the JSON data and print it to the console
+      const jsonData = JSON.parse(message.toString());
+      console.log(jsonData);
+    }
+  
+    // Subscribe to the MQTT topic when the client is connected
+    client.on('connect', function () {
+      console.log('Connected to MQTT broker');
+      client.subscribe(mqttTopic);
+    });
+  
+    // Handle incoming messages
+    client.on('message', handleMessage);
+  
+    // Event listener for the button click
+    document.getElementById('fetchDataButton').addEventListener('click', function () {
+      // Subscribe to the MQTT topic again (in case of multiple clicks)
+      client.subscribe(mqttTopic);
+    });
+  </script>
+  
 
-        client.subscribe("json/json_content");
-
-        function retrieveJsonContent() {
-            if (typeof client !== 'undefined') {
-                client.publish("json/retrieve_content", "Retrieve JSON content");
-            } else {
-                console.error("MQTT client not initialized.");
-            }
-        }
-    </script>
 </body>
 </html>
