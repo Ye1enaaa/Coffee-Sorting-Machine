@@ -10,7 +10,7 @@ model = load_model("models/keras_mode11.h5", compile=False)
 class_names1 = open("labels.txt", "r").readlines()
 
 # Database Initialization
-db = TinyDB('bean_tnydb.json')
+db = TinyDB('tnydb.json')
 
 camera = cv2.VideoCapture(0)
 
@@ -37,13 +37,13 @@ try:
         prediction = model.predict(image)
         index = np.argmax(prediction)
         class_name = class_names1[index].strip()
-        confidence_score = prediction[0][index]
+        confidence_score = prediction[0][index] * 100
 
         if class_name == "1 Bad":
             print("Bad bean detected with confidence:", confidence_score*100)
 
             # Insert bad bean information into TinyDB
-            db.insert({'status': 'bad'})
+            db.insert({'bean': '1'})
 
         elif class_name == "0 Good" or class_name == "2 Neutral":
             print("Good or neutral bean detected with confidence:", confidence_score*100)
@@ -53,7 +53,7 @@ try:
         if keyboard_input == 27:
             break
 
-        time.sleep(1)
+        #time.sleep(1)
 
 finally:
     # Release resources
