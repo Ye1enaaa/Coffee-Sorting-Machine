@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MQTT JSON Download</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.8/mqtt.min.js"></script>
+</head>
+<body>
+  <button id="downloadBtn">Download JSON</button>
+
+  <script>
+    const client = mqtt.connect("mqtt://mqtt-broker-ip:1883");  // Replace with your MQTT broker's IP address
+
+    client.on("connect", () => {
+      console.log("Connected to MQTT broker");
+      client.subscribe("json/file");
+    });
+
+    client.on("message", (topic, message) => {
+      if (topic === "json/file") {
+        const jsonData = JSON.parse(message.toString());
+        const jsonContent = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonContent], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const downloadBtn = document.getElementById("downloadBtn");
+        downloadBtn.href = url;
+        downloadBtn.download = "filename.json";
+        downloadBtn.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>
