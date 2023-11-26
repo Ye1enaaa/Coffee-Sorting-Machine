@@ -12,7 +12,7 @@ def on_message(client, userdata, msg):
     elif payload == 'deactivate':
         GPIO.output(18, GPIO.LOW)
 
-broker_address = "localhost"  # Use the IP address or hostname of your Raspberry Pi
+broker_address = "192.168.71.214"  # Use the IP address or hostname of your Raspberry Pi
 client = mqtt.Client()
 client.on_message = on_message
 client.connect(broker_address, 1883, 60)
