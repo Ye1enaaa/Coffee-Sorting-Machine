@@ -1,35 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MQTT JSON Download</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.8/mqtt.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON File Content</title>
 </head>
 <body>
-  <button id="downloadBtn">Download JSON</button>
+    <button id="retrieveBtn" onclick="retrieveJsonContent()">Retrieve JSON Content</button>
 
-  <script>
-    const client = mqtt.connect("mqtt://mqtt-broker-ip:1883");  // Replace with your MQTT broker's IP address
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.8/mqtt.min.js"></script>
+    <script>
+        const client = mqtt.connect("mqtt://192.168.1.23:1883");  // Replace with your MQTT broker's IP address
 
-    client.on("connect", () => {
-      console.log("Connected to MQTT broker");
-      client.subscribe("json/file");
-    });
+        client.on("message", (topic, message) => {
+            if (topic === "json/json_content") {
+                console.log("Received JSON content:");
+                console.log(JSON.parse(message.toString()));
+            }
+        });
 
-    client.on("message", (topic, message) => {
-      if (topic === "json/file") {
-        const jsonData = JSON.parse(message.toString());
-        const jsonContent = JSON.stringify(jsonData, null, 2);
-        const blob = new Blob([jsonContent], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
+        client.subscribe("json/json_content");
 
-        const downloadBtn = document.getElementById("downloadBtn");
-        downloadBtn.href = url;
-        downloadBtn.download = "filename.json";
-        downloadBtn.style.display = "block";
-      }
-    });
-  </script>
+        function retrieveJsonContent() {
+            if (typeof client !== 'undefined') {
+                client.publish("json/retrieve_content", "Retrieve JSON content");
+            } else {
+                console.error("MQTT client not initialized.");
+            }
+        }
+    </script>
 </body>
 </html>
