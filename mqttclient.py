@@ -6,7 +6,7 @@ import time
 import sqlite3
 
 # Constants
-MODEL_PATH = "keras_mode12.h5"
+MODEL_PATH = "models/keras_mode12.h5"
 LABELS_PATH = "labels.txt"
 BAD_THRESHOLD = 80  # Set the confidence threshold for "Bad" class
 GOOD_THRESHOLD = 5
@@ -16,7 +16,7 @@ model = load_model(MODEL_PATH, compile=False)
 class_names = [line.strip() for line in open(LABELS_PATH, "r")]
 
 # MQTT Broker address (replace with the IP address of your Raspberry Pi)
-broker_address = "127.0.0.1"
+broker_address = "192.168.71.214"
 
 def send_command(command):
     publish.single("actuator/control", payload=command, hostname=broker_address)
@@ -51,7 +51,7 @@ try:
 
         if class_name == "1 Bad":
             #and confidence_score > BAD_THRESHOLD / 100: 
-            #send_command('activate')
+            send_command('activate')
             bad_consecutive_count += 1
             #good_consecutive_count = 0
         elif class_name == "0 Good":
@@ -68,7 +68,7 @@ try:
             cursor = conn.cursor()
             cursor.execute('''INSERT INTO bean_counts_data(bad) VALUES (?);''', (1,))
             conn.commit()
-            class_name = "0 Good"
+            #class_name = "0 Good"
             bad_consecutive_count = 0
         if bad_consecutive_count > 3:
             send_command('deactivate')
