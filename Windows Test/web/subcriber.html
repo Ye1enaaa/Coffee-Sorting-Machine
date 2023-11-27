@@ -1,55 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fetch Data from MQTT</title>
-  <!-- Include the mqtt.js library -->
-  <!-- Alternative CDN link for the mqtt.js library -->
-  <!-- Include the mqtt.js library from the alternative CDN -->
-<script src="https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Click</title>
+    <!-- <script src="C:\Users\Dell\Desktop\AI-CAPSTONE\paho.javascript-1.1.0\paho-mqtt.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
 </head>
 <body>
+    <button onclick="requestJson()">Get JSON</button>
 
-<!-- HTML button -->
-<button id="fetchDataButton">Fetch Data</button>
+    <script>
+        // Replace 'mqtt_broker_ip' with the actual IP address or hostname of your MQTT broker
+        //var mqttBroker = '192.168.1.23';
+        //var client = new Paho.MQTT.Client(mqttBroker, 1883, 'web_client');
+        var mqttBroker = 'wss://192.168.1.23:1883/mqtt';
+        var client = new Paho.MQTT.Client(mqttBroker, 'web_client');
+        client.onConnectionLost = function (responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.error('Connection lost:', responseObject.errorMessage);
+            }
+        };
 
-<!-- JavaScript code -->
-<script>
-    // MQTT broker details
-    const mqttBrokerHost = "192.168.1.23"; // Replace with your MQTT broker's IP address
-    const mqttTopic = "json/file"; // Replace with the actual MQTT topic
-  
-    // Create an MQTT client
-    const client = mqtt.connect(`ws://${mqttBrokerHost}:1883`, {
-      //clientId: 'your_unique_client_id', // Choose a unique client ID
-      protocolVersion: 4, // Use MQTT protocol version 3.1.1
-      keepalive: 30, // Set the keep-alive interval in seconds
-    });
-  
-    // Function to handle incoming MQTT messages
-    function handleMessage(topic, message) {
-      // Parse the JSON data and print it to the console
-      const jsonData = JSON.parse(message.toString());
-      console.log(jsonData);
-    }
-  
-    // Subscribe to the MQTT topic when the client is connected
-    client.on('connect', function () {
-      console.log('Connected to MQTT broker');
-      client.subscribe(mqttTopic);
-    });
-  
-    // Handle incoming messages
-    client.on('message', handleMessage);
-  
-    // Event listener for the button click
-    document.getElementById('fetchDataButton').addEventListener('click', function () {
-      // Subscribe to the MQTT topic again (in case of multiple clicks)
-      client.subscribe(mqttTopic);
-    });
-  </script>
-  
+        client.onMessageArrived = function (message) {
+            console.log('Received JSON data:', JSON.parse(message.payloadString));
+        };
 
+        function requestJson() {
+            // Connect to the MQTT broker
+            client.connect({ onSuccess: function () {
+                console.log('Connected to MQTT broker');
+                // Subscribe to the MQTT topic
+                client.subscribe('actuator/json_data');
+                // Send a request for JSON data
+                message = new Paho.MQTT.Message('get_json');
+                message.destinationName = 'actuator/control';
+                client.send(message);
+            }});
+        }
+    </script>
 </body>
 </html>
