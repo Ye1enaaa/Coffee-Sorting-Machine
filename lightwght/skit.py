@@ -1,8 +1,10 @@
-import cv2
 import numpy as np
 #import RPi.GPIO as GPIO
 from keras.models import load_model
 import time
+from skimage import transform
+import matplotlib.pyplot as plt
+
 # Load the model
 model = load_model("models/keras_mode11.h5", compile=False)
 
@@ -13,18 +15,22 @@ class_names1 = open("labels.txt", "r").readlines()
 #GPIO.setwarnings(False)
 #GPIO.setup(18, GPIO.OUT)
 
-camera = cv2.VideoCapture(2)
-
 try:
     while True:
-        ret, image = camera.read()
+        # Simulate video capture (replace this with your actual video capture code)
+        # For Raspberry Pi, you might consider using picamera or another library.
+        # For simplicity, I'm using a black image.
+        image = np.zeros((480, 640, 3), dtype=np.uint8)
 
-        image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
-        
-        # Display the captured frame
-        cv2.imshow("Capture Beans", image)
+        # Resize the image using scikit-image
+        image = transform.resize(image, (224, 224), mode='constant', anti_aliasing=True)
 
-        image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
+        # Display the captured frame using matplotlib
+        plt.imshow(image)
+        plt.show(block=False)
+        plt.pause(0.01)
+
+        image = image.reshape(1, 224, 224, 3).astype(np.float32)
 
         image = (image / 127.5) - 1
 
@@ -35,17 +41,13 @@ try:
         confidence_score = prediction[0][index]
 
         if class_name == "1 Bad":
-            print('hi')
             #GPIO.output(18, GPIO.LOW)
+            print("Hello")
         if class_name == "0 Good" or class_name == "2 Neutral":
             #GPIO.output(18, GPIO.HIGH)
-            print(';')
-        keyboard_input = cv2.waitKey(1)
-
-        if keyboard_input == 27:
-            break
+            print("Hello")
         time.sleep(1)
+
 finally:
     #GPIO.cleanup()
-    camera.release()
-    cv2.destroyAllWindows()
+    print('Hii')
