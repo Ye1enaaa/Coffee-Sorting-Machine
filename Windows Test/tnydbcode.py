@@ -3,6 +3,7 @@ import numpy as np
 from keras.models import load_model
 from tinydb import TinyDB, Query
 import time
+import subprocess
 # Load the model
 model = load_model("models/keras_mode11.h5", compile=False)
 camera = cv2.VideoCapture(0)
@@ -64,7 +65,10 @@ try:
             break
 
         #time.sleep(1)
-
+except Exception as e:
+    print('Error', e)
+    print('Rebooting...')
+    subprocess.run(["sudo","reboot"])
 finally:
     # Release resources
     camera.release()
