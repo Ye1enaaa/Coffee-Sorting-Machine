@@ -20,7 +20,9 @@ badConsecutive = 0
 # Set the desired resolution for the camera
 #camera.set(3, 224)  # Width
 #camera.set(4, 224)  # Height
-
+#GPIO.setmode(GPIO.BCM)
+#GPIP.setwarnings(False)
+#GPIO.setup(18, GPIO.OUT)
 try:
     while True:
         _, image = camera.read()
@@ -42,21 +44,21 @@ try:
         class_name = class_names1[index].strip()
         confidence_score = np.round(prediction[0][index] * 100)
 
-        if class_name == "1 Bad" and confidence_score > 80:
+        if class_name == "1 Bad" and confidence_score > 80 or class_name == "0 Good" and confidence_score < 50:
             print("Bad bean detected with confidence:", confidence_score*100)
             #GPIO.output(18,GPIO.LOW)
             # Insert bad bean information into TinyDB
             badConsecutive += 1
-            existing_data = db.all()[0]['data']
-            existing_data['bad'] += 1
-            db.update({'data': existing_data}, Query().data.exists())
+            #existing_data = db.all()[0]['data']
+            #existing_data['bad'] += 1
+            #db.update({'data': existing_data}, Query().data.exists())
 
         elif class_name == "0 Good" or class_name == "2 Neutral":
             print("Good or neutral bean detected with confidence:", confidence_score*100)
             #GPIO.output(18, GPIO.HIGH)
         keyboard_input = cv2.waitKey(1)
 
-        if badConsecutive == 4:
+        if badConsecutive >= 3:
             existing_data = db.all()[0]['data']
             existing_data['bad'] += 1
             db.update({'data': existing_data}, Query().data.exists())
