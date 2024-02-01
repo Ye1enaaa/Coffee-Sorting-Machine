@@ -27,7 +27,7 @@ response = requests.post(laravel_api_url, json=data_to_send, headers=headers)
 if response.status_code == 200:
     result = response.json()
     if 'message' in result and result['message'] == 'OK':
-        print("Data sent successfully to Laravel backend.")
+        print("Data sent successfully.")
     else:
         print("Error in Laravel API response:", result)
 else:
